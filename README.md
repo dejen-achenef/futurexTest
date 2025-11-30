@@ -147,12 +147,14 @@ futureX/
 
 ## Environment Variables
 
-Each part has its own `.env.example` file. Copy and configure as needed:
+Each part has its own `.env` template file. Copy and configure as needed:
 
-- **Backend**: Database credentials, JWT secret
-- **Frontend**: API URL, YouTube API key
-- **Flutter**: API URL (update in code)
-- **Django**: Node API URL, Django secret key
+- **Backend**: `env.template` → `.env` (Database credentials, JWT secret)
+- **Frontend**: Create `.env` (API URL, YouTube API key)
+- **Flutter**: Create `.env` if needed (API URL)
+- **Django**: Create `.env` (Node API URL, Django secret key)
+
+⚠️ **Important**: All `.env` files are automatically ignored by git to protect sensitive information. See [SECURITY.md](SECURITY.md) for details.
 
 ## Testing
 

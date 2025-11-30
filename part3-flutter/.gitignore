@@ -43,3 +43,43 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment variables - CRITICAL: Never commit .env files!
+.env
+.env.local
+.env.*.local
+
+# Android
+android/local.properties
+android/.gradle/
+android/app/google-services.json
+android/key.properties
+*.jks
+*.keystore
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral/
+ios/Runner/GoogleService-Info.plist
+
+# macOS
+macos/Flutter/ephemeral/
+macos/Flutter/GeneratedPluginRegistrant.swift
+
+# Web
+web/.dart_tool/
+
+# Windows
+windows/flutter/ephemeral/
+
+# Linux
+linux/flutter/ephemeral/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

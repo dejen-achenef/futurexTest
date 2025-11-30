@@ -4,12 +4,17 @@
   "description": "User-Video Management API",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "npm run migrate && node server.js",
     "dev": "nodemon server.js",
     "migrate": "sequelize-cli db:migrate",
     "seed": "sequelize-cli db:seed:all"
   },
-  "keywords": ["api", "express", "mysql", "sequelize"],
+  "keywords": [
+    "api",
+    "express",
+    "mysql",
+    "sequelize"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -28,4 +33,3 @@
     "sequelize-cli": "^6.6.2"
   }
 }
-

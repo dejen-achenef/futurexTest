@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../models/user.dart';
 import '../models/video.dart';
@@ -12,26 +11,16 @@ class ApiService {
   final StorageService _storageService;
   late final Dio _dio;
   
-  // Auto-detect platform and set appropriate base URL
+  // Production API base URL (deployed on Render)
   static String get baseUrl {
-    if (kIsWeb) {
-      // Web uses localhost
-      return 'http://localhost:3000/api';
-    }
+    // Use Render deployment URL for all platforms
+    return 'https://futurextest-3.onrender.com/api';
     
-    // For Android emulator, use 10.0.2.2 to access host machine's localhost
-    // For iOS simulator, use localhost
-    // For physical devices, you'll need to use your computer's IP address
-    // 
-    // TODO: Update this based on your setup:
-    // - Android Emulator: 'http://10.0.2.2:3000/api'
-    // - iOS Simulator: 'http://localhost:3000/api'
-    // - Physical Device: 'http://YOUR_COMPUTER_IP:3000/api' (e.g., 'http://192.168.1.100:3000/api')
-    
-    // Default: Try Android emulator first, then fallback to localhost
-    // You can change this to match your setup
-    return 'http://10.0.2.2:3000/api'; // Android emulator
-    // return 'http://localhost:3000/api'; // iOS simulator or if Android emulator doesn't work
+    // For local development, uncomment and use:
+    // if (kIsWeb) {
+    //   return 'http://localhost:3000/api';
+    // }
+    // return 'http://10.0.2.2:3000/api'; // Android emulator
   }
 
   ApiService(this._storageService) {

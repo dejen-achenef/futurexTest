@@ -162,7 +162,7 @@ export const UserListPage: React.FC = () => {
                     <TableRow key={user.id} hover>
                       <TableCell>
                         <Avatar 
-                          src={user.avatar ? `http://localhost:3000/uploads/avatars/${user.avatar}` : undefined}
+                          src={user.avatar ? `https://futurextest-3.onrender.com/uploads/avatars/${user.avatar}` : undefined}
                           sx={{ bgcolor: 'primary.main' }}
                         >
                           {user.name.charAt(0).toUpperCase()}

@@ -179,7 +179,7 @@ export const UserDetailPage: React.FC = () => {
           <Paper elevation={3} sx={{ p: 3 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
               <Avatar
-                src={user.avatar ? `http://localhost:3000/uploads/avatars/${user.avatar}` : undefined}
+                src={user.avatar ? `https://futurextest-3.onrender.com/uploads/avatars/${user.avatar}` : undefined}
                 sx={{ width: 120, height: 120, bgcolor: 'primary.main', mb: 2 }}
               >
                 {user.name.charAt(0).toUpperCase()}

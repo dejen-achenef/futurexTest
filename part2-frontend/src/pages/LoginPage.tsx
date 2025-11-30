@@ -51,7 +51,7 @@ export const LoginPage: React.FC = () => {
                       `Server error: ${err.response.status}`;
       } else if (err.request) {
         // Request was made but no response
-        errorMessage = 'Cannot connect to server. Make sure the backend is running on http://localhost:3000';
+        errorMessage = 'Cannot connect to server. Please check your internet connection.';
       } else {
         // Something else happened
         errorMessage = err.message || 'An unexpected error occurred';

@@ -86,7 +86,12 @@ class VideoNotifier extends StateNotifier<VideoState> {
   }
 
   Future<void> loadVideoById(int id) async {
-    state = state.copyWith(isLoading: true, error: null);
+    // Clear previous video and set loading state
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      currentVideo: null, // Clear previous video
+    );
     try {
       final video = await _apiService.getVideoById(id);
       state = state.copyWith(
@@ -97,6 +102,7 @@ class VideoNotifier extends StateNotifier<VideoState> {
       state = state.copyWith(
         isLoading: false,
         error: e.toString().replaceAll('Exception: ', ''),
+        currentVideo: null, // Ensure video is cleared on error
       );
     }
   }

@@ -140,9 +140,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 ),
                                 child: IconButton(
                                   icon: const Icon(Icons.logout, color: Colors.white),
-                                  onPressed: () {
-                                    ref.read(authProvider.notifier).logout();
+                                  onPressed: () async {
+                                    await ref.read(authProvider.notifier).logout();
                                   },
+                                  tooltip: 'Logout',
                                 ),
                               ),
                             ],

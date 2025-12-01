@@ -23,7 +23,12 @@ class _VideoDetailsScreenState extends ConsumerState<VideoDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    ref.read(videoProvider.notifier).loadVideoById(widget.videoId);
+    // Always load the video when screen initializes
+    // Use postFrameCallback to ensure the widget is built first
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Clear any previous video and load the new one
+      ref.read(videoProvider.notifier).loadVideoById(widget.videoId);
+    });
   }
 
   @override
@@ -223,23 +228,39 @@ class _VideoDetailsScreenState extends ConsumerState<VideoDetailsScreen> {
             ),
             // Content
             SliverToBoxAdapter(
-              child: () {
-                if (videoState.isLoading && videoState.currentVideo == null) {
-                  return const SizedBox(
-                    height: 400,
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                } else if (videoState.error != null && videoState.currentVideo == null) {
-                  return SizedBox(
-                    height: 400,
-                    child: RetryWidget(
-                      message: videoState.error!,
-                      onRetry: () {
+              child: Builder(
+                builder: (context) {
+                  // Show loading if currently loading
+                  if (videoState.isLoading) {
+                    return const SizedBox(
+                      height: 400,
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  
+                  // Show error if there's an error and no video loaded
+                  if (videoState.error != null && videoState.currentVideo == null) {
+                    return SizedBox(
+                      height: 400,
+                      child: RetryWidget(
+                        message: videoState.error!,
+                        onRetry: () {
+                          ref.read(videoProvider.notifier).loadVideoById(widget.videoId);
+                        },
+                      ),
+                    );
+                  } else if (videoState.currentVideo != null) {
+                    // Verify we have the correct video
+                    if (videoState.currentVideo!.id != widget.videoId) {
+                      // Video ID mismatch, reload
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
                         ref.read(videoProvider.notifier).loadVideoById(widget.videoId);
-                      },
-                    ),
-                  );
-                } else if (videoState.currentVideo != null) {
+                      });
+                      return const SizedBox(
+                        height: 400,
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
                   final video = videoState.currentVideo!;
 
                   if (_youtubeController == null ||
@@ -454,9 +475,10 @@ class _VideoDetailsScreenState extends ConsumerState<VideoDetailsScreen> {
                       ),
                     ],
                   );
-                }
-                return const SizedBox.shrink();
-              }(),
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
             ),
           ],
         ),

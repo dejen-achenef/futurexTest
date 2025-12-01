@@ -65,36 +65,85 @@ class _LoginScreenState extends ConsumerState<LoginScreen> with SingleTickerProv
 
     // Listen for errors and success
     ref.listen<AuthState>(authProvider, (previous, next) {
-      if (next.error != null) {
+      // Show error snackbar when error occurs
+      if (next.error != null && previous?.error != next.error) {
+        // Clear any existing snackbars first
+        ScaffoldMessenger.of(context).clearSnackBars();
+        
+        // Format error message for better readability
+        String errorMessage = next.error!;
+        
+        // Make error messages more user-friendly
+        if (errorMessage.contains('Invalid credentials') || 
+            errorMessage.contains('Invalid email or password')) {
+          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        } else if (errorMessage.contains('User already exists') || 
+                   errorMessage.contains('Email already registered')) {
+          errorMessage = 'This email is already registered. Please use a different email or try logging in.';
+        } else if (errorMessage.contains('Connection timeout') || 
+                   errorMessage.contains('Cannot connect')) {
+          errorMessage = 'Connection failed. Please check your internet connection and try again.';
+        } else if (errorMessage.contains('No internet')) {
+          errorMessage = 'No internet connection. Please check your network settings.';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.error_outline, color: Colors.white),
+                const Icon(Icons.error_outline, color: Colors.white, size: 24),
                 const SizedBox(width: 12),
-                Expanded(child: Text(next.error!)),
+                Expanded(
+                  child: Text(
+                    errorMessage,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
               ],
             ),
             backgroundColor: Colors.red[600],
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 5),
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
           ),
         );
-      } else if (next.isAuthenticated && previous?.isAuthenticated != true) {
+      } 
+      // Show success snackbar when authentication succeeds
+      else if (next.isAuthenticated && previous?.isAuthenticated != true) {
+        // Clear any existing snackbars first
+        ScaffoldMessenger.of(context).clearSnackBars();
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(
+            content: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12),
-                Text('Welcome back!'),
+                const Icon(Icons.check_circle, color: Colors.white, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  _isLogin ? 'Welcome back!' : 'Account created successfully!',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
             backgroundColor: Colors.green[600],
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
           ),
         );
       }

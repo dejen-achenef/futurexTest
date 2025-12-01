@@ -71,3 +71,4 @@ If you accidentally committed a `.env` file or other sensitive data:
 
 Template files (like `env.template`) are safe to commit as they contain no real values. Always use these as a reference when setting up a new environment.
 
+

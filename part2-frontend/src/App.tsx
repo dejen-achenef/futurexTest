@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
@@ -59,9 +59,11 @@ const theme = createTheme({
 
 function Navigation() {
   const location = useLocation();
+  const navigate = useNavigate();
+  
   const handleLogout = () => {
     storage.removeToken();
-    window.location.href = '/login';
+    navigate('/login', { replace: true });
   };
 
   if (!storage.isAuthenticated()) return null;

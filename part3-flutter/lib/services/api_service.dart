@@ -79,11 +79,22 @@ class ApiService {
   Future<bool> testConnection() async {
     try {
       print('[API] Testing connection to: $baseUrl');
+      // Use the correct health endpoint path (without /api prefix since baseUrl already includes it)
       final response = await _dio.get('/health', options: Options(
-        receiveTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(seconds: 15), // Increased for Render cold start
+        sendTimeout: const Duration(seconds: 15),
       ));
       print('[API] Connection test successful: ${response.data}');
       return true;
+    } on DioException catch (e) {
+      print('[API] Connection test failed: ${e.type} - ${e.message}');
+      // If it's a timeout or connection error, Render might be sleeping (free tier)
+      if (e.type == DioExceptionType.connectionTimeout || 
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.connectionError) {
+        print('[API] Render service might be sleeping (free tier). First request may take 30-60 seconds.');
+      }
+      return false;
     } catch (e) {
       print('[API] Connection test failed: $e');
       return false;
@@ -106,12 +117,17 @@ class ApiService {
 
     try {
       print('[API] Sending login request...');
+      // Increased timeout for Render free tier (may be sleeping)
       final response = await _dio.post(
         '/auth/login',
         data: {
           'email': email,
           'password': password,
         },
+        options: Options(
+          receiveTimeout: const Duration(seconds: 60), // Increased for Render cold start
+          sendTimeout: const Duration(seconds: 30),
+        ),
       );
 
       print('[API] Login response received: ${response.statusCode}');
@@ -167,11 +183,12 @@ class ApiService {
     print('[API] Attempting registration for: $email');
     print('[API] Base URL: $baseUrl');
     
-    // First test connection
-    final canConnect = await testConnection();
-    if (!canConnect) {
-      throw Exception('Cannot reach server at $baseUrl. Make sure:\n1. Backend is running\n2. Correct IP address for your device');
-    }
+    // Skip connection test for faster UX (Render may be sleeping)
+    // Note: Render free tier services sleep after inactivity - first request may take 30-60 seconds
+    // final canConnect = await testConnection();
+    // if (!canConnect) {
+    //   throw Exception('Cannot reach server at $baseUrl.\n\nRender free tier services sleep after inactivity.\nFirst request may take 30-60 seconds to wake up.');
+    // }
     
     if (!await checkConnectivity()) {
       throw Exception('No internet connection detected');
@@ -179,6 +196,7 @@ class ApiService {
 
     try {
       print('[API] Sending registration request...');
+      // Increased timeout for Render free tier (may be sleeping)
       final response = await _dio.post(
         '/auth/register',
         data: {
@@ -186,6 +204,10 @@ class ApiService {
           'email': email,
           'password': password,
         },
+        options: Options(
+          receiveTimeout: const Duration(seconds: 60), // Increased for Render cold start
+          sendTimeout: const Duration(seconds: 30),
+        ),
       );
 
       print('[API] Register response received: ${response.statusCode}');
@@ -209,10 +231,10 @@ class ApiService {
       
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout) {
-        throw Exception('Connection timeout. Server may be slow or unreachable.\n\nBase URL: $baseUrl');
+        throw Exception('Connection timeout.\n\nRender free tier services sleep after inactivity.\nThe first request may take 30-60 seconds to wake up.\n\nPlease try again - subsequent requests will be faster.');
       }
       if (e.type == DioExceptionType.connectionError) {
-        throw Exception('Cannot connect to server at $baseUrl.\n\nPlease check:\n1. Backend is running (npm run dev)\n2. Correct IP for your device\n3. Firewall settings');
+        throw Exception('Cannot connect to server.\n\nPlease check:\n1. Your internet connection\n2. Render service is running\n3. Try again (Render may be waking up)');
       }
       
       // Extract error message from response

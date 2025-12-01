@@ -1,32 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../bloc/video/video_bloc.dart';
-import '../bloc/video/video_event.dart';
-import '../bloc/video/video_state.dart';
-import '../bloc/auth/auth_bloc.dart';
-import '../bloc/auth/auth_state.dart';
+import '../providers/video_provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/retry_widget.dart';
 
-class VideoDetailsScreen extends StatefulWidget {
+class VideoDetailsScreen extends ConsumerStatefulWidget {
   final int videoId;
 
   const VideoDetailsScreen({super.key, required this.videoId});
 
   @override
-  State<VideoDetailsScreen> createState() => _VideoDetailsScreenState();
+  ConsumerState<VideoDetailsScreen> createState() => _VideoDetailsScreenState();
 }
 
-class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
+class _VideoDetailsScreenState extends ConsumerState<VideoDetailsScreen> {
   YoutubePlayerController? _youtubeController;
 
   @override
   void initState() {
     super.initState();
-    context.read<VideoBloc>().add(LoadVideoById(widget.videoId));
+    ref.read(videoProvider.notifier).loadVideoById(widget.videoId);
   }
 
   @override
@@ -50,7 +47,8 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Video'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Video', style: TextStyle(fontWeight: FontWeight.bold)),
         content: const Text('Are you sure you want to permanently delete this video? This cannot be undone.'),
         actions: [
           TextButton(
@@ -60,14 +58,25 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              context.read<VideoBloc>().add(DeleteVideo(videoId));
+              ref.read(videoProvider.notifier).deleteVideo(videoId);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Video deleted successfully')),
+                SnackBar(
+                  content: const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 12),
+                      Text('Video deleted successfully'),
+                    ],
+                  ),
+                  backgroundColor: Colors.green[600],
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               );
-              Navigator.pop(context); // Go back to home screen
+              Navigator.pop(context);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -78,7 +87,8 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Hide Video'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Hide Video', style: TextStyle(fontWeight: FontWeight.bold)),
         content: const Text('Hide this video from your feed? Other users will still be able to see it.'),
         actions: [
           TextButton(
@@ -88,13 +98,24 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(dialogContext);
-              context.read<VideoBloc>().add(HideVideo(videoId));
+              ref.read(videoProvider.notifier).hideVideo(videoId);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Video hidden from your feed')),
+                SnackBar(
+                  content: const Row(
+                    children: [
+                      Icon(Icons.visibility_off, color: Colors.white),
+                      SizedBox(width: 12),
+                      Text('Video hidden from your feed'),
+                    ],
+                  ),
+                  backgroundColor: Colors.orange[600],
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               );
-              Navigator.pop(context); // Go back to home screen
+              Navigator.pop(context);
             },
-            child: const Text('Hide'),
+            child: const Text('Hide', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -103,237 +124,343 @@ class _VideoDetailsScreenState extends State<VideoDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = context.watch<AuthBloc>().state;
-    final currentUser = authState is AuthAuthenticated ? authState.user : null;
+    final authState = ref.watch(authProvider);
+    final currentUser = authState.user;
+    final videoState = ref.watch(videoProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Video Details'),
-        actions: [
-          BlocBuilder<VideoBloc, VideoState>(
-            builder: (context, videoState) {
-              if (videoState is VideoLoaded) {
-                final video = videoState.video;
-                final isOwner = currentUser != null && currentUser.id == video.userId;
-                
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Hide button - available for all videos
-                    IconButton(
-                      icon: const Icon(Icons.visibility_off, color: Colors.orange, size: 22),
-                      onPressed: () => _handleHide(context, video.id),
-                      tooltip: 'Hide video',
-                    ),
-                    // Delete button - only for own videos
-                    if (isOwner)
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red, size: 22),
-                        onPressed: () => _handleDelete(context, video.id, currentUser.id),
-                        tooltip: 'Delete video permanently',
-                      ),
-                  ],
-                );
-              }
-              return const SizedBox.shrink();
-            },
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.blue.shade50,
+              Colors.purple.shade50,
+              Colors.white,
+            ],
           ),
-        ],
-      ),
-      body: BlocBuilder<VideoBloc, VideoState>(
-        builder: (context, state) {
-          if (state is VideoLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state is VideoError) {
-            return RetryWidget(
-              message: state.message,
-              onRetry: () {
-                context.read<VideoBloc>().add(LoadVideoById(widget.videoId));
-              },
-            );
-          } else if (state is VideoLoaded) {
-            final video = state.video;
-
-            // Initialize player if not already initialized
-            if (_youtubeController == null ||
-                _youtubeController!.initialVideoId != video.youtubeVideoId) {
-              _initializePlayer(video.youtubeVideoId);
-            }
-
-            return SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // YouTube Player - Use thumbnail with link for web, native player for mobile
-                  if (kIsWeb)
-                    // Web: Show thumbnail with play button
-                    AspectRatio(
-                      aspectRatio: 16 / 9,
-                      child: Stack(
-                        alignment: Alignment.center,
+        ),
+        child: CustomScrollView(
+          slivers: [
+            // App Bar
+            SliverAppBar(
+              expandedHeight: 200,
+              floating: false,
+              pinned: true,
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              leading: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha((0.9 * 255).round()),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ),
+              actions: [
+                if (videoState.currentVideo != null)
+                  Builder(
+                    builder: (context) {
+                      final video = videoState.currentVideo!;
+                      final isOwner = currentUser != null && currentUser.id == video.userId;
+                      
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Image.network(
-                            video.thumbnailUrl,
-                            width: double.infinity,
-                            height: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey[300],
-                                child: const Icon(Icons.video_library, size: 64),
-                              );
-                            },
-                          ),
                           Container(
+                            margin: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.5),
+                              color: Colors.white.withAlpha((0.9 * 255).round()),
                               shape: BoxShape.circle,
                             ),
                             child: IconButton(
-                              icon: const Icon(
-                                Icons.play_circle_filled,
-                                size: 64,
-                                color: Colors.white,
-                              ),
-                              onPressed: () async {
-                                final url = Uri.parse('https://www.youtube.com/watch?v=${video.youtubeVideoId}');
-                                if (await canLaunchUrl(url)) {
-                                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                                }
-                              },
+                              icon: Icon(Icons.visibility_off, color: Colors.orange.shade700),
+                              onPressed: () => _handleHide(context, video.id),
+                              tooltip: 'Hide video',
                             ),
                           ),
-                        ],
-                      ),
-                    )
-                  else
-                    // Mobile: Use native YouTube player
-                    AspectRatio(
-                      aspectRatio: 16 / 9,
-                      child: YoutubePlayer(
-                        controller: _youtubeController!,
-                        showVideoProgressIndicator: true,
-                        progressIndicatorColor: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  // Video Info
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          video.title,
-                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
+                          if (isOwner)
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
+                              margin: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(16),
+                                color: Colors.white.withAlpha((0.9 * 255).round()),
+                                shape: BoxShape.circle,
                               ),
-                              child: Text(
-                                video.category,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                              child: IconButton(
+                                icon: Icon(Icons.delete, color: Colors.red.shade700),
+                                onPressed: () => _handleDelete(context, video.id, currentUser.id),
+                                tooltip: 'Delete video',
                               ),
                             ),
-                            if (video.duration != null) ...[
-                              const SizedBox(width: 12),
-                              Icon(
-                                Icons.access_time,
-                                size: 16,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                video.durationFormatted,
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
+                        ],
+                      );
+                    },
+                  ),
+              ],
+              flexibleSpace: FlexibleSpaceBar(
+                background: videoState.currentVideo != null
+                    ? Hero(
+                        tag: 'video_${videoState.currentVideo!.id}',
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.blue.shade600,
+                                Colors.purple.shade600,
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+            // Content
+            SliverToBoxAdapter(
+              child: () {
+                if (videoState.isLoading && videoState.currentVideo == null) {
+                  return const SizedBox(
+                    height: 400,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                } else if (videoState.error != null && videoState.currentVideo == null) {
+                  return SizedBox(
+                    height: 400,
+                    child: RetryWidget(
+                      message: videoState.error!,
+                      onRetry: () {
+                        ref.read(videoProvider.notifier).loadVideoById(widget.videoId);
+                      },
+                    ),
+                  );
+                } else if (videoState.currentVideo != null) {
+                  final video = videoState.currentVideo!;
+
+                  if (_youtubeController == null ||
+                      _youtubeController!.initialVideoId != video.youtubeVideoId) {
+                    _initializePlayer(video.youtubeVideoId);
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Video Player
+                      Container(
+                        margin: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha((0.2 * 255).round()),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10),
+                            ),
                           ],
                         ),
-                        if (video.description != null &&
-                            video.description!.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          Text(
-                            'Description',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            video.description!,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[700],
-                              height: 1.5,
-                            ),
-                          ),
-                        ],
-                        if (video.user != null) ...[
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 20,
-                                backgroundColor: Colors.grey[300],
-                                child: video.user!.avatar != null
-                                    ? ClipOval(
-                                        child: Image.network(
-                                          video.user!.avatar!,
-                                          width: 40,
-                                          height: 40,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) {
-                                            return Icon(
-                                              Icons.person,
-                                              color: Colors.grey[600],
-                                            );
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: kIsWeb
+                              ? AspectRatio(
+                                  aspectRatio: 16 / 9,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      Image.network(
+                                        video.thumbnailUrl,
+                                        width: double.infinity,
+                                        height: double.infinity,
+                                        fit: BoxFit.cover,
+                                      ),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withAlpha((0.5 * 255).round()),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: IconButton(
+                                          icon: const Icon(
+                                            Icons.play_circle_filled,
+                                            size: 64,
+                                            color: Colors.white,
+                                          ),
+                                          onPressed: () async {
+                                            final url = Uri.parse('https://www.youtube.com/watch?v=${video.youtubeVideoId}');
+                                            if (await canLaunchUrl(url)) {
+                                              await launchUrl(url, mode: LaunchMode.externalApplication);
+                                            }
                                           },
                                         ),
-                                      )
-                                    : Icon(
-                                        Icons.person,
-                                        color: Colors.grey[600],
                                       ),
+                                    ],
+                                  ),
+                                )
+                              : AspectRatio(
+                                  aspectRatio: 16 / 9,
+                                  child: YoutubePlayer(
+                                    controller: _youtubeController!,
+                                    showVideoProgressIndicator: true,
+                                    progressIndicatorColor: Colors.blue.shade600,
+                                  ),
+                                ),
+                        ),
+                      ),
+                      // Video Info
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              video.title,
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
                               ),
-                              const SizedBox(width: 12),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.blue.shade400,
+                                        Colors.purple.shade400,
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    video.category,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                if (video.duration != null) ...[
+                                  const SizedBox(width: 12),
+                                  Icon(Icons.access_time, size: 18, color: Colors.grey[600]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    video.durationFormatted,
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            if (video.description != null && video.description!.isNotEmpty) ...[
+                              const SizedBox(height: 24),
                               Text(
-                                video.user!.name,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
+                                'Description',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withAlpha((0.05 * 255).round()),
+                                      blurRadius: 10,
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  video.description!,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[700],
+                                    height: 1.6,
+                                  ),
                                 ),
                               ),
                             ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-          return const SizedBox.shrink();
-        },
+                            if (video.user != null) ...[
+                              const SizedBox(height: 24),
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withAlpha((0.05 * 255).round()),
+                                      blurRadius: 10,
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 30,
+                                      backgroundColor: Colors.grey[200],
+                                      backgroundImage: video.user!.avatar != null
+                                          ? NetworkImage(video.user!.avatar!)
+                                          : null,
+                                      child: video.user!.avatar == null
+                                          ? Icon(Icons.person, color: Colors.grey[600])
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Uploaded by',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            video.user!.name,
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 40),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return const SizedBox.shrink();
+              }(),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
-

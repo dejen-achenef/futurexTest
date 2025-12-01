@@ -1,69 +1,57 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-
-import 'bloc/auth/auth_bloc.dart';
-import 'bloc/auth/auth_event.dart';
-import 'bloc/auth/auth_state.dart';
-import 'bloc/video/video_bloc.dart';
-import 'bloc/user/user_bloc.dart';
-import 'services/api_service.dart';
-import 'services/storage_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/splash_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Initialize services
-    final storageService = StorageService(const FlutterSecureStorage());
-    final apiService = ApiService(storageService);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authProvider);
 
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (context) => AuthBloc(
-            apiService: apiService,
-            storageService: storageService,
-          )..add(CheckAuthStatus()),
+    return MaterialApp(
+      title: 'FutureX Video Learning',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.light,
         ),
-        BlocProvider(
-          create: (context) => VideoBloc(apiService),
-        ),
-        BlocProvider(
-          create: (context) => UserBloc(apiService),
-        ),
-      ],
-      child: MaterialApp(
-        title: 'FutureX Video Learning',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            centerTitle: true,
-            elevation: 0,
+        useMaterial3: true,
+        appBarTheme: AppBarTheme(
+          centerTitle: true,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          titleTextStyle: const TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
-        home: BlocBuilder<AuthBloc, AuthState>(
-          builder: (context, state) {
-            if (state is AuthInitial || state is AuthLoading) {
-              return const SplashScreen();
-            } else if (state is AuthAuthenticated) {
-              return const HomeScreen();
-            } else {
-              return const LoginScreen();
-            }
-          },
+        cardTheme: CardThemeData(
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
         ),
       ),
+      home: authState.isLoading
+          ? const SplashScreen()
+          : authState.isAuthenticated
+              ? const HomeScreen()
+              : const LoginScreen(),
     );
   }
 }

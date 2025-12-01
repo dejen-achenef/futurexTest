@@ -12,10 +12,47 @@ import { VideoUploadPage } from './pages/VideoUploadPage';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1976d2',
+      main: '#667eea',
     },
     secondary: {
-      main: '#dc004e',
+      main: '#764ba2',
+    },
+    background: {
+      default: '#f5f7fa',
+    },
+  },
+  typography: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h4: {
+      fontWeight: 700,
+    },
+    h5: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
+  },
+  shape: {
+    borderRadius: 12,
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          fontWeight: 600,
+          borderRadius: 8,
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+          borderRadius: 16,
+        },
+      },
     },
   },
 });
@@ -30,18 +67,37 @@ function Navigation() {
   if (!storage.isAuthenticated()) return null;
 
   return (
-    <AppBar position="static">
+    <AppBar 
+      position="static"
+      sx={{
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        boxShadow: '0 4px 20px rgba(102, 126, 234, 0.3)',
+      }}
+    >
       <Toolbar>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+        <Typography 
+          variant="h6" 
+          component="div" 
+          sx={{ 
+            flexGrow: 1,
+            fontWeight: 700,
+            fontSize: '1.5rem',
+          }}
+        >
           FutureX Dashboard
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1 }}>
           <Button
             color="inherit"
             component={Link}
             to="/users"
             sx={{
-              backgroundColor: location.pathname === '/users' ? 'rgba(255, 255, 255, 0.1)' : 'transparent'
+              backgroundColor: location.pathname === '/users' ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+              borderRadius: 2,
+              px: 2,
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              },
             }}
           >
             Users
@@ -51,12 +107,27 @@ function Navigation() {
             component={Link}
             to="/videos/upload"
             sx={{
-              backgroundColor: location.pathname === '/videos/upload' ? 'rgba(255, 255, 255, 0.1)' : 'transparent'
+              backgroundColor: location.pathname === '/videos/upload' ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
+              borderRadius: 2,
+              px: 2,
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              },
             }}
           >
             Upload Video
           </Button>
-          <Button color="inherit" onClick={handleLogout}>
+          <Button 
+            color="inherit" 
+            onClick={handleLogout}
+            sx={{
+              borderRadius: 2,
+              px: 2,
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              },
+            }}
+          >
             Logout
           </Button>
         </Box>
